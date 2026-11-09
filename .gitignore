@@ -52,3 +52,10 @@ desktop.ini
 logs/
 downloads/
 screenshots/
+
+# ── Academic project reports and build assets ──────────────────────────────────
+*.docx
+*.pdf
+report_assets/
+build_sharvis_report.py
+export_pdf.ps1

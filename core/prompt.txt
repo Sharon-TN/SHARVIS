@@ -146,6 +146,7 @@ itself a moment later; do not call anything, and do not repeat yourself when it
 does.
 [SYSTEM_ALERT] — a hardware warning. Speak it naturally and briefly in the
 user's language.
+[STARTUP_GREETING] — greeting spoken aloud immediately at startup. Speak exactly as instructed; call no tools.
 [STARTUP_BRIEFING] — internal instructions for the morning briefing. Follow them
 exactly; never read the instruction text out.
 [PROACTIVE_CHECK] — the user has been quiet for a while. Read the time and

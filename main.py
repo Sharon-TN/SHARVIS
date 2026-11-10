@@ -620,6 +620,7 @@ class SharvisLive:
         self._resume_handle: str | None = None
         self._turn_done_event: asyncio.Event | None = None
         self._dashboard     = None
+        self._greeting_sent    = False          # initial startup greeting fires once per launch
         self._briefing_sent    = False          # morning briefing fires once per process
         self._sys_monitor      = SystemMonitor()  # persistent cooldown state
         self._proactive        = ProactiveEngine()
@@ -1793,6 +1794,47 @@ class SharvisLive:
             stream.stop()
             stream.close()
 
+    # ── Startup greeting ────────────────────────────────────────────────────────
+
+    async def _send_startup_greeting(self) -> None:
+        """
+        Instant greeting spoken out loud upon launching SHARVIS:
+          - Morning (04:00 - 11:59): "Hello, sir. Good morning, how may I help you?"
+          - Afternoon (12:00 - 16:59): "Hello, sir. Good afternoon, sir. How may I help you?"
+          - Evening / Night (17:00 - 03:59): "Hello, sir. Good evening, sir. How may I help you?"
+        """
+        await asyncio.sleep(0.5)
+        if not self.session:
+            return
+
+        hour = datetime.now().hour
+        if 4 <= hour < 12:
+            time_greeting = "Good morning, how may I help you?"
+        elif 12 <= hour < 17:
+            time_greeting = "Good afternoon, sir. How may I help you?"
+        else:
+            time_greeting = "Good evening, sir. How may I help you?"
+
+        full_greeting = f"Hello, sir. {time_greeting}"
+
+        if self._turn_done_event:
+            self._turn_done_event.clear()
+
+        prompt = (
+            f"[STARTUP_GREETING] Say EXACTLY this greeting out loud to the user right now and nothing else: "
+            f"\"{full_greeting}\". Do not call any tools, do not add filler or extra sentences, "
+            f"and wait for the user to respond."
+        )
+
+        try:
+            await self.session.send_client_content(
+                turns={"role": "user", "parts": [{"text": prompt}]},
+                turn_complete=True,
+            )
+            print(f"[SHARVIS] Startup greeting sent: {full_greeting}")
+        except Exception as e:
+            print(f"[SHARVIS] Failed to send startup greeting: {e}")
+
     # ── Morning briefing ────────────────────────────────────────────────────────
 
     async def _send_startup_briefing(self) -> None:
@@ -2218,10 +2260,11 @@ class SharvisLive:
                     if self._dashboard:
                         tg.create_task(self._relay_phone_audio())
 
-                    # Morning briefing — fires once per process launch (if enabled).
-                    # Skipped in wake-word mode: it comes up asleep, and a briefing
-                    # would mean talking while "asleep".
-                    if not self._briefing_sent and get_brief_enabled() and self._awake:
+                    # Startup greeting — speaks automatically upon launching SHARVIS
+                    if not self._greeting_sent and self._awake:
+                        self._greeting_sent = True
+                        tg.create_task(self._send_startup_greeting())
+                    elif not self._briefing_sent and get_brief_enabled() and self._awake:
                         self._briefing_sent = True
                         tg.create_task(self._send_startup_briefing())
 

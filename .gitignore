@@ -59,3 +59,4 @@ screenshots/
 report_assets/
 build_sharvis_report.py
 export_pdf.ps1
+run.vbs
